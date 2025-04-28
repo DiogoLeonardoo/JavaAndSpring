@@ -1,23 +1,23 @@
 package br.com.study.services;
 
+import br.com.study.controllers.BookController;
 import br.com.study.data.dto.v1.BookDto;
 import br.com.study.exception.ResourceNotFoundException;
 import br.com.study.mapper.custom.BookMapper;
-import br.com.study.mapper.custom.PersonMapper;
 import br.com.study.model.Book;
-import br.com.study.model.Person;
 import br.com.study.repository.BookRepository;
-import br.com.study.repository.PersonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static br.com.study.mapper.ObjectMapper.parseListObjects;
 import static br.com.study.mapper.ObjectMapper.parseObject;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Service
 public class BookService {
@@ -31,14 +31,13 @@ public class BookService {
     @Autowired
     BookMapper converter;
     @Autowired
-    private PersonRepository personRepository;
+    private BookRepository bookRepository;
 
-    public List<BookDto> findAll() {
-
+    public Page<BookDto> findAll(Pageable pageable) {
         logger.info("Finding all books!");
+        return bookRepository.findAll(pageable)
+                .map(book -> parseObject(book, BookDto.class));
 
-        var books = parseListObjects(repository.findAll() , BookDto.class);
-        return books;
     }
 
     public BookDto findById(Long id) {
@@ -81,5 +80,13 @@ public class BookService {
         Book entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No records found for this ID!"));
         repository.delete(entity);
+    }
+
+    private void addHateoasLinks(BookDto dto) {
+        dto.add(linkTo(methodOn(BookController.class).findById(dto.getId())).withSelfRel().withType("GET"));
+        dto.add(linkTo(methodOn(BookController.class).findAll(1,12,"asc")).withSelfRel().withType("GET"));
+        dto.add(linkTo(methodOn(BookController.class).findById(dto.getId())).withRel("delete").withType("DELETE"));
+        dto.add(linkTo(methodOn(BookController.class).update(dto)).withRel("update").withType("PUT"));
+        dto.add(linkTo(methodOn(BookController.class).create(dto)).withRel("create").withType("POST"));
     }
 }
