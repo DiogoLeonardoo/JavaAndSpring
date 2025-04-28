@@ -4,21 +4,26 @@ import br.com.study.controllers.PersonController;
 import br.com.study.data.dto.v1.PersonDto;
 import br.com.study.data.dto.v2.PersonDtoV2;
 import br.com.study.exception.ResourceNotFoundException;
-import static br.com.study.mapper.ObjectMapper.parseListObjects;
 import static br.com.study.mapper.ObjectMapper.parseObject;
 
+import br.com.study.mapper.custom.BookMapper;
 import br.com.study.mapper.custom.PersonMapper;
 import br.com.study.model.Person;
 import br.com.study.repository.PersonRepository;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableArgumentResolver;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.PagedModel;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -32,16 +37,25 @@ public class PersonService {
 
     @Autowired
     PersonMapper converter;
+    @Autowired
+    private PageableArgumentResolver pageableArgumentResolver;
+    @Autowired
+    private PersonRepository personRepository;
+    @Autowired
+    private BookMapper bookMapper;
 
 
-    public List<PersonDto> findAll() {
-
+    public Page<PersonDto> findAll(Pageable pageable) {
         logger.info("Finding all People!");
 
-        var persons = parseListObjects(repository.findAll(), PersonDto.class);
-        persons.forEach(this::addHateoasLinks);
-        return persons;
+        return repository.findAll(pageable)
+                .map(person -> {
+                    PersonDto dto = parseObject(person, PersonDto.class);
+                    addHateoasLinks(dto);
+                    return dto;
+                });
     }
+
 
     public PersonDto findById(Long id) {
         logger.info("Finding one Person!");
@@ -87,6 +101,19 @@ public class PersonService {
         return dto;
     }
 
+    @Transactional
+    public PersonDto disablePerson(Long id) {
+
+        logger.info("Disabling one Person!");
+
+        repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No records found for this ID!"));
+        repository.disablePerson(id);
+
+        var entity = repository.findById(id).get();
+        var dto = parseObject(entity, PersonDto.class);
+        return dto;
+    }
 
     public void delete(Long id) {
 
@@ -97,9 +124,21 @@ public class PersonService {
         repository.delete(entity);
     }
 
+    public Page<PersonDto> findByName(String firstName, Pageable pageable) {
+        logger.info("Finding people by name!");
+
+        return repository.findPeopleByFirstName(firstName, pageable)
+                .map(person -> {
+                    PersonDto dto = parseObject(person, PersonDto.class);
+                    addHateoasLinks(dto);
+                    return dto;
+                });
+    }
+
+
     private void addHateoasLinks(PersonDto dto) {
         dto.add(linkTo(methodOn(PersonController.class).findById(dto.getId())).withSelfRel().withType("GET"));
-        dto.add(linkTo(methodOn(PersonController.class).findAll()).withRel("findAll").withType("GET"));
+        dto.add(linkTo(methodOn(PersonController.class).findAll(1,12,"asc")).withSelfRel().withType("GET"));
         dto.add(linkTo(methodOn(PersonController.class).findById(dto.getId())).withRel("delete").withType("DELETE"));
         dto.add(linkTo(methodOn(PersonController.class).update(dto)).withRel("update").withType("PUT"));
         dto.add(linkTo(methodOn(PersonController.class).create(dto)).withRel("create").withType("POST"));

@@ -32,7 +32,7 @@ public class PersonDto extends RepresentationModel<PersonDto> implements Seriali
 
     @JsonSerialize(using = GenderSerializer.class)
     private String gender;
-    private String sensitiveData;
+    private Boolean enabled;
 
     public PersonDto() {}
 
@@ -92,23 +92,24 @@ public class PersonDto extends RepresentationModel<PersonDto> implements Seriali
         this.phoneNumber = phoneNumber;
     }
 
-    public String getSensitiveData() {
-        return sensitiveData;
+    public Boolean getEnabled() {
+        return enabled;
     }
 
-    public void setSensitiveData(String sensitiveData) {
-        this.sensitiveData = sensitiveData;
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
         PersonDto personDto = (PersonDto) o;
-        return Objects.equals(id, personDto.id) && Objects.equals(firstName, personDto.firstName) && Objects.equals(lastName, personDto.lastName) && Objects.equals(phoneNumber, personDto.phoneNumber) && Objects.equals(birthDay, personDto.birthDay) && Objects.equals(address, personDto.address) && Objects.equals(gender, personDto.gender) && Objects.equals(sensitiveData, personDto.sensitiveData);
+        return Objects.equals(id, personDto.id) && Objects.equals(firstName, personDto.firstName) && Objects.equals(lastName, personDto.lastName) && Objects.equals(phoneNumber, personDto.phoneNumber) && Objects.equals(birthDay, personDto.birthDay) && Objects.equals(address, personDto.address) && Objects.equals(gender, personDto.gender) && Objects.equals(enabled, personDto.enabled);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, firstName, lastName, phoneNumber, birthDay, address, gender, sensitiveData);
+        return Objects.hash(super.hashCode(), id, firstName, lastName, phoneNumber, birthDay, address, gender, enabled);
     }
 }
